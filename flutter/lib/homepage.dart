@@ -14,7 +14,7 @@ class Homepage extends StatelessWidget {
             spacing: 16,
             children: [
               SizedBox(),
-              Text('Website Formulir LDTE STEI ITB', textScaleFactor: 1.6,),
+              Text('Formulir LDTE STEI ITB', textScaleFactor: 1.6,),
               ElevatedButton(onPressed: () => Get.toNamed('/form/pinjam'), child: Text('Pinjam Peralatan'))
             ],
           ),
