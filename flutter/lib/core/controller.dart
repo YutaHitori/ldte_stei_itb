@@ -283,7 +283,7 @@ class FormController extends GetxController {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Padding(padding: EdgeInsets.all(8), child: Text('"Form_Peminjaman-${DateTime.now().millisecondsSinceEpoch}.pdf"')),
+            Padding(padding: EdgeInsets.all(8), child: Text('"Form_Peminjaman_Peralatan.pdf"')),
             Container(
               constraints: BoxConstraints(
                 maxHeight: Get.height / 1.20
@@ -295,7 +295,7 @@ class FormController extends GetxController {
                 canChangeOrientation: false,
                 canChangePageFormat: false,
                 canDebug: false,
-                pdfFileName: "Form_Peminjaman-${DateTime.now().millisecondsSinceEpoch}.pdf",
+                pdfFileName: "Form_Peminjaman_Peralatan-${DateTime.now().millisecondsSinceEpoch}.pdf",
                 build: (PdfPageFormat format) => pinjam(),
                 useActions: false,
               ),
