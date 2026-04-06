@@ -1,11 +1,16 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:ldte_itb/core/custom-widget.dart';
+import 'package:dropdown_flutter/custom_dropdown.dart';
+import 'package:ldte_itb/misc/function.dart';
+import 'package:ldte_itb/misc/global.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:web/web.dart' as web;
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:omni_datetime_picker/omni_datetime_picker.dart';
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
@@ -19,8 +24,12 @@ extension StringExtensions on String? {
 }
 
 class FormController extends GetxController {
+  var pdf = pw.Document();
+
   final namaC = TextEditingController();
   final nimC = TextEditingController();
+  final fakultasC = SingleSelectController<String>(null);
+  final prodiC = SingleSelectController<String>(null);
   final dosenC = TextEditingController();
   final nipC = TextEditingController();
   final ketuaC = TextEditingController();
@@ -29,7 +38,6 @@ class FormController extends GetxController {
   final ttdC = TextEditingController();
   final barangC = <TextEditingController>[TextEditingController()].obs;
   final banyakC = <TextEditingController>[TextEditingController()].obs;
-  final items = ['custom', 'Oscilloscope', 'Multimeter', 'Signal Generator'];
 
   final namaE = Rxn<String>(null); 
   final nimE = Rxn<String>(null); 
@@ -40,6 +48,18 @@ class FormController extends GetxController {
   final akhirE = Rxn<String>(null); 
   final barangE = Rxn<String>(null); 
   final ttdE = Rxn<String>(null); 
+
+  var prodiList = <String>[].obs;
+
+  @override
+  void onInit() async {
+    super.onInit();
+  }
+  
+  void setProdi() {
+    prodiC.value = null;
+    prodiList.value = getAvailableProdi(fakultasC.value);
+  }
 
   var now = DateTime.parse(DateTime.now().toString().split(' ').first);
   late var limit = now.add(Duration(days: 28)).subtract(Duration(milliseconds: 1));
@@ -73,16 +93,17 @@ class FormController extends GetxController {
     Get.back(closeOverlays: true);
   }
 
-  Future<void> pinjam(pw.Document pdf) async {
+  Future<Uint8List> pinjam() async {
     final ttf = await rootBundle.load("fonts/calibri.ttf");
     final ttfBold = await rootBundle.load("fonts/calibri-bold.ttf");
     final ttfItalic = await rootBundle.load("fonts/calibri-italic.ttf");
-    final calibri = pw.Font.ttf(ttf);
-    final calibriBold = pw.Font.ttf(ttfBold);
-    final calibriItalic = pw.Font.ttf(ttfItalic);
+
+    pdf = pw.Document();
 
     final nama = namaC.text.isBlank() ? null : namaC.text.trim();
     final nim = nimC.text.isBlank() ? null : nimC.text.trim();
+    final fakultas = regexp.firstMatch(fakultasC.value ?? '')?.group(1);
+    final prodi = prodiC.value?.replaceAll(RegExp(r'\((.*?)\)'), '').trim();
     final dosen = dosenC.text.isBlank() ? null : dosenC.text.trim();
     final nip = nipC.text.isBlank() ? null : nipC.text.trim();
     final ketua = ketuaC.text.isBlank() ? null : ketuaC.text.trim();
@@ -90,156 +111,206 @@ class FormController extends GetxController {
       : DateFormat('d MMMM yyyy', 'id_ID').format((DateTime.parse(mulaiC.text.replaceAll('/', '-'))));
     final akhir = akhirC.text.isBlank() ? null
       : DateFormat('d MMMM yyyy', 'id_ID').format((DateTime.parse(akhirC.text.replaceAll('/', '-'))));
-    final ttd = ttdC.text.isBlank() ? null : ttdC.text.trim();
     final barang = barangC.value.map((e) => e.text.isBlank() ? "_____________________________________________________________________" : e.text.trim()).toList();
     final banyak = banyakC.value.map((e) => e.text.isBlank() ? "" : ' x' + e.text.trim()).toList();
 
-    pdf.addPage(pw.Page(
-        pageFormat: PdfPageFormat.letter,
-        build: (pw.Context context) {
-          return pw.DefaultTextStyle(
-            style: pw.TextStyle(
-              font: calibri,
-              fontNormal: calibri,
-              fontBold: calibriBold,
-              fontItalic: calibriItalic,
-              fontWeight: pw.FontWeight.normal,
-              fontSize: 12,
-              lineSpacing: 5
-            ),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Center(
-                  child: pw.Column(
-                    children: [
-                      pw.Text("FORM PEMINJAMAN PERALATAN", style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                      pw.SizedBox(height: 5),
-                      pw.Text("LABORATORIUM DASAR TEKNIK ELEKTRO", style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                      pw.SizedBox(height: 5),
-                      pw.Text("SEKOLAH TEKNIK ELEKTRO DAN INFORMATIKA", style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                    ]
-                  )
-                ),
-                pw.SizedBox(height: 22),
-                pw.Text("Saya yang bertanda tangan dibawah ini:"),
-
-                pw.SizedBox(height: 22),
-                pw.Text("Nama/NIM : ${nama ?? "______________________________"} / ${nim ?? "_________________"}"),
-                pw.SizedBox(height: 22),
-                pw.Text("adalah mahasiswa program studi Teknik Elektro / __________  STEI ITB, dengan pembimbing:"),
-                pw.SizedBox(height: 22),
-                pw.Text("Dosen Pembimbing: ${dosen ?? "______________________________"}"),
-                pw.SizedBox(height: 22),
-                pw.Text("Hendak meminjam sejumlah peralatan dari Laboratorium Dasar Teknik Elektro STEI:"),
-
-                pw.Padding(
-                  padding: pw.EdgeInsets.only(left: 18),
-                  child: pw.Table(
-                    columnWidths: {
-                      0: const pw.FixedColumnWidth(18),
-                      1: const pw.FlexColumnWidth(),
-                    },
-                    children: [
-                      for (int i = 0; i < barang.length; i++) ...[
-                        pw.TableRow(children: [
-                          pw.SizedBox(height: 5),
-                        ]),
-                        pw.TableRow(children: [
-                          pw.Text('${i + 1}.'),
-                          pw.Text('${barang[i]}${banyak[i]}'),
-                        ]),
-                      ]
-                    ],
-                  )
-                ),
-                
-                pw.SizedBox(height: 22),
-
-                pw.Text("Peminjaman saya lakukan mulai tanggal ${mulai ?? "_______________________"}"),
-                pw.SizedBox(height: 5),
-                pw.Text("dan akan dikembalikan tanggal ${akhir ?? "_____________________"}"),
-                pw.SizedBox(height: 22),
-                pw.Text("Saya berjanji untuk bertanggung jawab sepenuhnya terhadap barang yang saya pinjam dengan:"),
-                pw.SizedBox(height: 22),
-                pw.Padding(
-                  padding: pw.EdgeInsets.only(left: 18),
-                  child: pw.Table(
-                    columnWidths: {
-                      0: const pw.FixedColumnWidth(18),
-                      1: const pw.FlexColumnWidth(),
-                    },
-                    children: [
-                      pw.TableRow(children: [
-                        pw.Text("1."),
-                        pw.Text("Tidak menyalahgunakan peralatan tersebut, termasuk untuk kegiatan diluar akademis", textAlign: pw.TextAlign.justify),
-                      ]),
+    pdf.addPage(pw.MultiPage(
+      pageFormat: PdfPageFormat.letter,
+      margin: pw.EdgeInsets.fromLTRB(72, 72, 72, 40),
+      footer: (context) => pw.DefaultTextStyle(
+        style: defaultTextStyle(ttf, ttfBold, ttfItalic, fontSize: 11),
+        child: pw.Transform.translate(
+          offset: PdfPoint(0, 0), 
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text("Catatan:", textAlign: pw.TextAlign.justify),
+              pw.SizedBox(height: 2.0),
+              pw.Text("1. Surat pernyataan ini sekaligus sebagai tanda terima barang.", textAlign: pw.TextAlign.justify),
+              pw.SizedBox(height: 2.0),
+              pw.Text("2. Peminjam selain Prodi Teknik Elektro wajib menyertakan tanda tangan kaprodi.", textAlign: pw.TextAlign.justify),
+            ]
+          )
+        )
+      ),
+      build: (pw.Context context) => [
+        pw.DefaultTextStyle(
+          style: defaultTextStyle(ttf, ttfBold, ttfItalic),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Center(
+                child: pw.Column(
+                  children: [
+                    pw.Text("FORM PEMINJAMAN PERALATAN", style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                    pw.SizedBox(height: 5),
+                    pw.Text("LABORATORIUM DASAR TEKNIK ELEKTRO", style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                    pw.SizedBox(height: 5),
+                    pw.Text("SEKOLAH TEKNIK ELEKTRO DAN INFORMATIKA", style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                  ]
+                )
+              ),
+              pw.SizedBox(height: 22),
+              pw.Text("Saya yang bertanda tangan dibawah ini:"),
+              pw.SizedBox(height: 22),
+              pw.Text("Nama/NIM : ${nama ?? "______________________________"} / ${nim ?? "_________________"}"),
+              pw.SizedBox(height: 22),
+              pw.Text("adalah mahasiswa program studi ${prodi ?? "__________"} ${fakultas ?? "__________"} ITB, dengan pembimbing:"),
+              pw.SizedBox(height: 22),
+              pw.Text("Dosen Pembimbing: ${dosen ?? "______________________________"}"),
+              pw.SizedBox(height: 22),
+              pw.Text("Hendak meminjam sejumlah peralatan dari Laboratorium Dasar Teknik Elektro STEI:"),
+              pw.Padding(
+                padding: pw.EdgeInsets.only(left: 18),
+                child: pw.Table(
+                  columnWidths: {
+                    0: const pw.FixedColumnWidth(18),
+                    1: const pw.FlexColumnWidth(),
+                  },
+                  children: [
+                    for (int i = 0; i < barang.length; i++) ...[
                       pw.TableRow(children: [
                         pw.SizedBox(height: 5),
                       ]),
                       pw.TableRow(children: [
-                        pw.Text("2."),
-                        pw.Text("Mengembalikan dalam kondisi baik sebagaimana saat diterima, dan bersedia bertanggung jawab sepenuhnya terhadap segala macam kerusakan dan kehilangan.", textAlign: pw.TextAlign.justify),
+                        pw.Text('${i + 1}.'),
+                        pw.Text('${barang[i]}${banyak[i]}'),
                       ]),
                     ]
-                  ),
-                ),
-                
-                pw.SizedBox(height: 22),
-                pw.Center(
-                  child: pw.Text("Bandung, _____________________"),
-                ),
-                pw.SizedBox(height: 5),
-                pw.Padding(
-                  padding: pw.EdgeInsets.symmetric(horizontal: 57),
-                  child: pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          pw.Text('Peminjam,'),
-                          pw.SizedBox(height: 40,),
-                          pw.Text('Nama: ${nama ?? ''}'),
-                          pw.SizedBox(height: 5),
-                          pw.Text('NIM: ${nim ?? ''}'),
-                        ]
-                      ),
-                      pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          pw.Text('Dosen Pembimbing,'),
-                          pw.SizedBox(height: 40,),
-                          pw.Text('Nama: ${dosen ?? ''}'),
-                          pw.SizedBox(height: 5),
-                          pw.Text('NIP: ${nip ?? ''}'),
-                        ]
-                      ),
-                    ]
-                  ),
-                ),
-                pw.SizedBox(height: 5),
-                pw.Center(
-                  child: pw.Column(
-                    children: [
-                      pw.Text("Mengetahui,"),
+                  ],
+                )
+              ),
+              
+              pw.SizedBox(height: 22),
+              pw.Text("Peminjaman saya lakukan mulai tanggal ${mulai ?? "_______________________"}"),
+              pw.SizedBox(height: 5),
+              pw.Text("dan akan dikembalikan tanggal ${akhir ?? "_____________________"}"),
+              pw.SizedBox(height: 22),
+              pw.Text("Saya berjanji untuk bertanggung jawab sepenuhnya terhadap barang yang saya pinjam dengan:"),
+              pw.SizedBox(height: 22),
+              pw.Padding(
+                padding: pw.EdgeInsets.only(left: 18),
+                child: pw.Table(
+                  columnWidths: {
+                    0: const pw.FixedColumnWidth(18),
+                    1: const pw.FlexColumnWidth(),
+                  },
+                  children: [
+                    pw.TableRow(children: [
+                      pw.Text("1."),
+                      pw.Text("Tidak menyalahgunakan peralatan tersebut, termasuk untuk kegiatan diluar akademis", textAlign: pw.TextAlign.justify),
+                    ]),
+                    pw.TableRow(children: [
                       pw.SizedBox(height: 5),
-                      pw.Text("Ketua Prodi ___________"),  
-                      pw.SizedBox(height: 40,),
-                      pw.Text("${ketua ?? "____________________"}"),
-                    ],
-                  ),
+                    ]),
+                    pw.TableRow(children: [
+                      pw.Text("2."),
+                      pw.Text("Mengembalikan dalam kondisi baik sebagaimana saat diterima, dan bersedia bertanggung jawab sepenuhnya terhadap segala macam kerusakan dan kehilangan.", textAlign: pw.TextAlign.justify),
+                    ]),
+                  ]
                 ),
-              ]
+              ),
+              pw.SizedBox(height: 22),
+              pw.Center(
+                child: pw.Text("Bandung, ${mulai ?? "_____________________"}"),
+              ),
+              pw.SizedBox(height: 5),
+              pw.Padding(
+                padding: pw.EdgeInsets.symmetric(horizontal: 57),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('Peminjam,'),
+                        pw.SizedBox(height: 40,),
+                        pw.Text('Nama: ${nama ?? ''}'),
+                        pw.SizedBox(height: 5),
+                        pw.Text('NIM: ${nim ?? ''}'),
+                      ]
+                    ),
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('Dosen Pembimbing,'),
+                        pw.SizedBox(height: 40,),
+                        pw.Text('Nama: ${dosen ?? ''}'),
+                        pw.SizedBox(height: 5),
+                        pw.Text('NIP: ${nip ?? ''}'),
+                      ]
+                    ),
+                  ]
+                ),
+              ),
+              pw.SizedBox(height: 5),
+              pw.Center(
+                child: pw.Column(
+                  children: [
+                    pw.Text("Mengetahui,"),
+                    pw.SizedBox(height: 5),
+                    pw.Text("Ketua Prodi ${prodi ?? "__________"}"),  
+                    pw.SizedBox(height: 40,),
+                    pw.Text("${ketua ?? "____________________"}"),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 16.0),
+            ]
+          ),
+        )
+      ]
+    ));
+    return pdf.save();
+  }
+
+  void preview() async {
+    Get.bottomSheet(
+      enableDrag: false,
+      isScrollControlled: true,
+      Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
+          color: appTheme.colorScheme.background,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(padding: EdgeInsets.all(8), child: Text('"Form_Peminjaman-${DateTime.now().millisecondsSinceEpoch}.pdf"')),
+            Container(
+              constraints: BoxConstraints(
+                maxHeight: Get.height / 1.20
+              ),
+              height: Get.width * 1.294,
+              child: PdfPreview(
+                enableScrollToPage: true,
+                maxPageWidth: double.infinity,
+                canChangeOrientation: false,
+                canChangePageFormat: false,
+                canDebug: false,
+                pdfFileName: "Form_Peminjaman-${DateTime.now().millisecondsSinceEpoch}.pdf",
+                build: (PdfPageFormat format) => pinjam(),
+                useActions: false,
+              ),
             ),
-          );
-      }));
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Row(
+                spacing: 8,
+                children: [
+                  Expanded(child: ElevatedButton(onPressed: print, child: Text('Print'))),
+                  Expanded(child: ElevatedButton(onPressed: download, child: Text('Download'), style: ElevatedButton.styleFrom(backgroundColor: appTheme.colorScheme.tertiary))),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void download() async {
-    final pdf = pw.Document();
-    await pinjam(pdf);
-    var savedFile = await pdf.save();
+    final savedFile = await pinjam();
     List<int> fileInts = List.from(savedFile);
     web.HTMLAnchorElement()
     ..href = "data:application/octet-stream;charset=utf-16le;base64,${base64.encode(fileInts)}"
@@ -248,10 +319,8 @@ class FormController extends GetxController {
   }
 
   void print() async {
-    final pdf = pw.Document();
-    await pinjam(pdf);
     await Printing.layoutPdf(
-      onLayout: (format) async => pdf.save(),
+      onLayout: (format) => pinjam(),
     );
   }
 }

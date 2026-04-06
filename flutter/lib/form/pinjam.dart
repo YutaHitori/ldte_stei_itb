@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:dropdown_flutter/custom_dropdown.dart';
 import 'package:get/get.dart';
+import 'package:ldte_itb/misc/global.dart';
 import 'package:ldte_itb/core/controller.dart';
 import 'package:ldte_itb/core/custom-widget.dart';
-import 'package:dropdown_flutter/custom_dropdown.dart';
 
 class Pinjam extends StatelessWidget {
   const Pinjam({super.key});
@@ -34,29 +35,67 @@ class Pinjam extends StatelessWidget {
                 errorText: c.namaE.value,
               ),
               AutoHideTextField(
-                labelText: 'Nim',
+                labelText: 'NIM',
                 controller: c.nimC,
                 errorText: c.nimE.value,
                 keyboardType: TextInputType.number,
                 inputFormatters: [ FilteringTextInputFormatter.allow(RegExp(r'[0-9\-\/\s]')) ],
               ),
+              Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: 4,
+                children: [
+                  Text('Fakultas/Sekolah ', textScaleFactor: 1.02,),
+                  DropdownFlutter<String>(
+                    listItemBuilder: (context, item, isSelected, onItemSelect) => Text('${item}', style: TextStyle(color: isSelected ? Colors.black : null),),
+                    decoration: CustomDropdownDecoration(
+                      expandedFillColor: appTheme.inputDecorationTheme.fillColor,
+                      closedFillColor: appTheme.inputDecorationTheme.fillColor,
+                      listItemStyle: TextStyle(color: Colors.black),
+                    ),
+                    excludeSelected: false,
+                    items: fakultas,
+                    controller: c.fakultasC,
+                    onChanged: (value) => c.setProdi(),
+                  ),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: 4,
+                children: [
+                  Text('Program Studi ', textScaleFactor: 1.02,),
+                  DropdownFlutter<String>(
+                    listItemBuilder: (context, item, isSelected, onItemSelect) => Text('${item}', style: TextStyle(color: isSelected ? Colors.black : null),),
+                    decoration: CustomDropdownDecoration(
+                      expandedFillColor: appTheme.inputDecorationTheme.fillColor,
+                      closedFillColor: appTheme.inputDecorationTheme.fillColor,
+                      listItemStyle: TextStyle(color: Colors.black),
+                    ),
+                    excludeSelected: false,
+                    items: c.prodiList.value,
+                    controller: c.prodiC,
+                    onChanged: (value) => {},
+                  ),
+                ],
+              ),
               AutoHideTextField(
-                labelText: 'Dosen',
+                labelText: 'Dosen Pembimbing',
                 controller: c.dosenC,
                 errorText: c.dosenE.value,
               ),
               AutoHideTextField(
-                labelText: 'Nip',
+                labelText: 'NIP',
                 controller: c.nipC,
                 errorText: c.nipE.value,
                 keyboardType: TextInputType.number,
                 inputFormatters: [ FilteringTextInputFormatter.allow(RegExp(r'[0-9\-\/\s]')) ],
               ),
-              // AutoHideTextField(
-              //   labelText: 'Ketua Prodi',
-              //   controller: c.ketuaC,
-              //   errorText: c.ketuaE.value,
-              // ),
+              AutoHideTextField(
+                labelText: 'Ketua Prodi',
+                controller: c.ketuaC,
+                errorText: c.ketuaE.value,
+              ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -91,7 +130,7 @@ class Pinjam extends StatelessWidget {
                             );
                           },
                           excludeSelected: false,
-                          items: c.items,
+                          items: items,
                           initialItem: 'custom',
                           hintText: 'select',
                           onChanged: (v) {
@@ -155,13 +194,7 @@ class Pinjam extends StatelessWidget {
                 },
               ),
               SizedBox(height: 8),
-              Row(
-                spacing: 16,
-                children: [
-                  Expanded(child: ElevatedButton(onPressed: c.print, child: Text('print'), style: ElevatedButton.styleFrom(backgroundColor: appTheme.colorScheme.secondary))),
-                  Expanded(child: ElevatedButton(onPressed: c.download, child: Text('download pdf'), style: ElevatedButton.styleFrom(backgroundColor: appTheme.colorScheme.secondary))),
-                ],
-              )
+              ElevatedButton(onPressed: c.preview, child: Text('Pinjam'), style: ElevatedButton.styleFrom(backgroundColor: appTheme.colorScheme.secondary)),
             ],
           )),
         ),
